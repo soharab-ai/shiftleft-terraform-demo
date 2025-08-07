@@ -14,7 +14,7 @@ resource "aws_iam_access_key" "user" {
 }
 
 resource "aws_iam_user_policy" "userpolicy" {
-  name = "excess_policy"
+  name = "least_privilege_policy"
   user = "${aws_iam_user.user.name}"
 
   policy = <<EOF
@@ -23,16 +23,52 @@ resource "aws_iam_user_policy" "userpolicy" {
   "Statement": [
     {
       "Action": [
-        "ec2:*",
-        "s3:*",
-        "lambda:*",
-        "cloudwatch:*"
+        "ec2:DescribeInstances",
+        "ec2:DescribeSecurityGroups",
+        "s3:GetObject",
+        "s3:ListBucket",
+        "lambda:GetFunction",
+        "lambda:ListFunctions",
+        "cloudwatch:GetMetricData",
+        "cloudwatch:DescribeAlarms"
       ],
       "Effect": "Allow",
+      "Resource": [
+        "arn:aws:s3:::specific-bucket-name",
+        "arn:aws:s3:::specific-bucket-name/*",
+        "arn:aws:lambda:*:*:function:specific-function-name",
+        "arn:aws:ec2:*:*:instance/*",
+        "arn:aws:cloudwatch:us-east-1:*:alarm:specific-alarm-name"
+      ],
+      "Condition": {
+        "IpAddress": {
+          "aws:SourceIp": "10.0.0.0/24"
+        },
+        "Bool": {
+          "aws:MultiFactorAuthPresent": "true"
+        },
+        "NumericLessThan": {
+          "s3:max-keys": "100"
+        }
+      }
+    },
+    {
+      "Effect": "Deny",
+      "Action": [
+        "s3:PutObjectAcl",
+        "s3:PutBucketPolicy",
+        "lambda:UpdateFunctionCode",
+        "ec2:CreateSnapshot",
+        "ec2:CreateImage",
+        "s3:ReplicateObject"
+      ],
       "Resource": "*"
     }
   ]
 }
+EOF
+}
+
 EOF
 }
 
