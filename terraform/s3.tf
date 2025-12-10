@@ -1,15 +1,66 @@
 resource "aws_s3_bucket" "data" {
-  # bucket is public
-  # bucket is not encrypted
-  # bucket does not have access logs
-  # bucket does not have versioning
   bucket        = "${local.resource_prefix.value}-data"
-  acl           = "public-read"
   force_destroy = true
   tags = {
     Name        = "${local.resource_prefix.value}-data"
     Environment = local.resource_prefix.value
   }
+}
+
+resource "aws_s3_bucket_acl" "data_acl" {
+  bucket = aws_s3_bucket.data.id
+  acl    = "private"
+}
+
+resource "aws_s3_bucket_public_access_block" "data_access_block" {
+  bucket                  = aws_s3_bucket.data.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "data_encryption" {
+  bucket = aws_s3_bucket.data.id
+  
+  rule {
+    apply_server_side_encryption_by_default {
+      kms_master_key_id = aws_kms_key.s3_key.arn
+      sse_algorithm     = "aws:kms"
+    }
+  }
+}
+
+resource "aws_s3_bucket_versioning" "data_versioning" {
+  bucket = aws_s3_bucket.data.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_policy" "data_policy" {
+  bucket = aws_s3_bucket.data.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action    = "s3:*"
+        Effect    = "Deny"
+        Resource  = [
+          aws_s3_bucket.data.arn,
+          "${aws_s3_bucket.data.arn}/*"
+        ]
+        Principal = "*"
+        Condition = {
+          Bool = {
+            "aws:SecureTransport": "false"
+          }
+        }
+      }
+    ]
+  })
+}
+
 }
 
 resource "aws_s3_bucket_object" "data_object" {
