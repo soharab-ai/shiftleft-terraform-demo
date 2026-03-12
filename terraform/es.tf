@@ -18,14 +18,38 @@ resource "aws_elasticsearch_domain" "monitoring-framework" {
 
 data aws_iam_policy_document "policy" {
   statement {
-    actions   = ["es:*"]
+    actions   = [
+      "es:ESHttpGet",
+      "es:DescribeElasticsearchDomain"
+    ]
     principals {
       type        = "AWS"
-      identifiers = ["*"]
+      identifiers = [
+        "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/specific-application-role"
+      ]
     }
-    resources = ["*"]
+    resources = [
+      "arn:aws:es:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:domain/specific-domain-name"
+    ]
+    
+    condition {
+      test     = "IpAddress"
+      variable = "aws:SourceIp"
+      values   = ["10.0.0.0/8"]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:SourceVpce"
+      values   = ["vpce-specific-endpoint-id"]
+    }
   }
 }
+
+data "aws_caller_identity" "current" {}
+
+data "aws_region" "current" {}
+
 
 resource "aws_elasticsearch_domain_policy" "monitoring-framework-policy" {
   domain_name = aws_elasticsearch_domain.monitoring-framework.domain_name
