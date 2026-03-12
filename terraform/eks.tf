@@ -58,13 +58,18 @@ resource aws_eks_cluster "eks_cluster" {
   role_arn = "${aws_iam_role.iam_for_eks.arn}"
 
   vpc_config {
-    subnet_ids = ["${aws_subnet.eks_subnet1.id}", "${aws_subnet.eks_subnet2.id}"]
+    subnet_ids              = ["${aws_subnet.eks_subnet1.id}", "${aws_subnet.eks_subnet2.id}"]
+    endpoint_public_access  = true
+    endpoint_private_access = true
+    public_access_cidrs     = ["10.0.0.0/8", "172.16.0.0/12"]
   }
 
   depends_on = [
     "aws_iam_role_policy_attachment.policy_attachment-AmazonEKSClusterPolicy",
     "aws_iam_role_policy_attachment.policy_attachment-AmazonEKSServicePolicy",
   ]
+}
+
 }
 
 output "endpoint" {
