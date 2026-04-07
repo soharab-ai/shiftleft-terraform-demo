@@ -14,7 +14,7 @@ resource "aws_iam_access_key" "user" {
 }
 
 resource "aws_iam_user_policy" "userpolicy" {
-  name = "excess_policy"
+  name = "restricted_policy"
   user = "${aws_iam_user.user.name}"
 
   policy = <<EOF
@@ -23,16 +23,57 @@ resource "aws_iam_user_policy" "userpolicy" {
   "Statement": [
     {
       "Action": [
-        "ec2:*",
-        "s3:*",
-        "lambda:*",
-        "cloudwatch:*"
+        "ec2:Describe*",
+        "s3:Get*",
+        "s3:List*",
+        "lambda:Get*",
+        "lambda:List*",
+        "cloudwatch:Get*",
+        "cloudwatch:Describe*"
       ],
       "Effect": "Allow",
-      "Resource": "*"
+      "Resource": [
+        "arn:aws:s3:::allowed-bucket-1/*",
+        "arn:aws:s3:::allowed-bucket-2/*",
+        "arn:aws:ec2:*:*:instance/*",
+        "arn:aws:lambda:*:*:function:allowed-function-*",
+        "arn:aws:cloudwatch:*:*:alarm:critical-*",
+        "arn:aws:logs:*:*:log-group:app-*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": ["us-west-1", "us-east-1"]
+        },
+        "Bool": {
+          "aws:SecureTransport": "true",
+          "aws:MultiFactorAuthPresent": "true"
+        },
+        "IpAddress": {
+          "aws:SourceIp": ["10.0.0.0/24", "192.168.1.0/24"]
+        }
+      }
+    },
+    {
+      "Effect": "Deny",
+      "Action": [
+        "s3:PutObject*",
+        "s3:GetObject*",
+        "lambda:InvokeFunction",
+        "ec2:CreateSnapshot*",
+        "ec2:CopySnapshot*"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringNotEquals": {
+          "aws:RequestedRegion": ["us-west-1", "us-east-1"]
+        }
+      }
     }
   ]
 }
+EOF
+}
+
 EOF
 }
 
