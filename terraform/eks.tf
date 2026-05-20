@@ -53,18 +53,30 @@ resource aws_subnet "eks_subnet2" {
   }
 }
 
-resource aws_eks_cluster "eks_cluster" {
+resource "aws_eks_cluster" "eks_cluster" {
   name     = "${local.resource_prefix.value}-eks"
   role_arn = "${aws_iam_role.iam_for_eks.arn}"
 
   vpc_config {
     subnet_ids = ["${aws_subnet.eks_subnet1.id}", "${aws_subnet.eks_subnet2.id}"]
+    security_group_ids = ["${aws_security_group.eks_sg.id}"]
+    endpoint_private_access = true
+    endpoint_public_access = false
+  }
+  
+  encryption_config {
+    provider {
+      key_arn = aws_kms_key.eks_encryption_key.arn
+    }
+    resources = ["secrets"]
   }
 
   depends_on = [
     "aws_iam_role_policy_attachment.policy_attachment-AmazonEKSClusterPolicy",
     "aws_iam_role_policy_attachment.policy_attachment-AmazonEKSServicePolicy",
   ]
+}
+
 }
 
 output "endpoint" {
