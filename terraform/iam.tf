@@ -14,25 +14,35 @@ resource "aws_iam_access_key" "user" {
 }
 
 resource "aws_iam_user_policy" "userpolicy" {
-  name = "excess_policy"
-  user = "${aws_iam_user.user.name}"
+  name = "least_privilege_policy"
+  user = aws_iam_user.user.name
 
-  policy = <<EOF
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Action": [
-        "ec2:*",
-        "s3:*",
-        "lambda:*",
-        "cloudwatch:*"
-      ],
-      "Effect": "Allow",
-      "Resource": "*"
-    }
-  ]
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:DescribeInstances",
+          "ec2:DescribeSecurityGroups",
+          "ec2:DescribeVolumes",
+          "s3:GetObject",
+          "s3:ListBucket",
+          "cloudwatch:GetMetricStatistics",
+          "cloudwatch:ListMetrics"
+        ]
+        Resource = [
+          "arn:aws:s3:::specific-bucket-name",
+          "arn:aws:s3:::specific-bucket-name/*",
+          "arn:aws:ec2:us-east-1:${data.aws_caller_identity.current.account_id}:instance/*",
+          "arn:aws:ec2:us-east-1:${data.aws_caller_identity.current.account_id}:volume/*",
+          "arn:aws:cloudwatch:*:${data.aws_caller_identity.current.account_id}:*"
+        ]
+      }
+    ]
+  })
 }
+
 EOF
 }
 
